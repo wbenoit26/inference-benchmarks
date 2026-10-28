@@ -16,7 +16,6 @@ line-length = 79
 target-version = "py312"
 
 [tool.ruff.lint]
-extend-select = ["T201"]
 extend-safe-fixes = ["C408"]
 mccabe = {"max-complexity" = 18}
 select = ["B", "C", "E", "F", "I", "UP", "W"]
