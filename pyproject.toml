@@ -6,7 +6,22 @@ requires-python = ">=3.12"
 dependencies = ["numpy", "h5py"]
 
 [dependency-groups]
-dev = ["pytest"]
+dev = [
+    "pytest",
+    "prek>=0.1",
+]
+
+[tool.ruff]
+line-length = 79
+target-version = "py312"
+
+[tool.ruff.lint]
+extend-select = ["T201"]
+extend-safe-fixes = ["C408"]
+mccabe = {"max-complexity" = 18}
+select = ["B", "C", "E", "F", "I", "UP", "W"]
+# ignore W605 and E203 for consistency with black
+ignore = ["W605", "E203"]  
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
