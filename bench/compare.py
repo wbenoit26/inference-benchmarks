@@ -1,16 +1,7 @@
 from pathlib import Path
 
 import h5py
-
-
-def overlap(
-    t0_a: float, n_a: int, t0_b: float, n_b: int, rate: float
-) -> tuple[slice, slice]:
-    offset = round((t0_b - t0_a) * rate)
-    start, stop = max(offset, 0), min(n_a, offset + n_b)
-    if start >= stop:
-        return slice(0, 0), slice(0, 0)
-    return slice(start, stop), slice(start - offset, stop - offset)
+import numpy as np
 
 
 def compare_raw(trial: Path, reference: Path) -> dict:
@@ -18,31 +9,22 @@ def compare_raw(trial: Path, reference: Path) -> dict:
 
     Returns {group: {branch_id: {"samples": int, "max_abs": float}}}, with
     group "background" or "foreground", for each branch in both files.
-    Only samples at times both series cover are compared, and branches
-    with no such samples are left out.
     """
     results = {}
     with (
         h5py.File(trial / "timeseries.hdf5", "r") as t,
         h5py.File(reference / "timeseries.hdf5", "r") as r,
     ):
-        rate = r.attrs["inference_sampling_rate"]
         for group in ("background", "foreground"):
             results[group] = {}
             for branch_id in t[group].keys() & r[group].keys():
-                t0_a = t[group][branch_id].attrs["sample_t0"]
-                n_a = t[group][branch_id].shape[-1]
-
-                t0_b = r[group][branch_id].attrs["sample_t0"]
-                n_b = r[group][branch_id].shape[-1]
-
-                slice_a, slice_b = overlap(t0_a, n_a, t0_b, n_b, rate)
-
-                timeseries_a = t[group][branch_id][slice_a]
-                timeseries_b = r[group][branch_id][slice_b]
-
-                if len(timeseries_a) == 0:
+                a, b = t[group][branch_id], r[group][branch_id]
+                if a.attrs["sample_t0"] != b.attrs["sample_t0"]:
+                    raise ValueError(f"{group} {branch_id} starts differ")
+                n = min(len(a), len(b))
+                if n == 0:
                     continue
+                timeseries_a, timeseries_b = a[:n], b[:n]
 
                 results[group][branch_id] = {
                     "samples": len(timeseries_a),
@@ -50,3 +32,39 @@ def compare_raw(trial: Path, reference: Path) -> dict:
                 }
 
     return results
+
+
+def compare_events(trial: Path, reference: Path, loudest: int = 100) -> dict:
+    def loudest_first(directory: Path):
+        with h5py.File(directory / "background.hdf5", "r") as f:
+            return np.sort(f["parameters/detection_statistic"][:])[::-1]
+
+    statistics = loudest_first(trial)
+    reference_statistics = loudest_first(reference)
+
+    n = min(loudest, len(statistics), len(reference_statistics))
+    return {
+        "events": len(statistics),
+        "reference_events": len(reference_statistics),
+        "max_abs": float(abs(statistics[:n] - reference_statistics[:n]).max()),
+    }
+
+
+def compare_foreground(trial: Path, reference: Path) -> dict:
+    def injections(directory: Path):
+        with h5py.File(directory / "foreground.hdf5", "r") as f:
+            times = np.array(f["parameters/injection_time"][:])
+            stats = np.array(f["parameters/detection_statistic"][:])
+            return times, stats
+
+    times, statistics = injections(trial)
+    reference_times, reference_statistics = injections(reference)
+
+    if not np.array_equal(times, reference_times):
+        raise ValueError(
+            "Injection times between trials and reference don't match"
+        )
+    return {
+        "injections": len(statistics),
+        "max_abs": float(abs(statistics - reference_statistics).max()),
+    }
