@@ -1,0 +1,12 @@
+[project]
+name = "inference-benchmarks"
+version = "0.0.1"
+description = "Benchmarks of aframe's inference across backends and sites"
+requires-python = ">=3.12"
+dependencies = ["numpy", "h5py"]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
