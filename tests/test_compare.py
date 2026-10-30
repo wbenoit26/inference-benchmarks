@@ -25,15 +25,14 @@ def test_compare_stops_at_the_shorter_series(tmp_path):
     write_series(tmp_path / "ref", background=[0.0, 1.0, 2.0, 9.0])
     write_series(tmp_path / "trial", background=[0.5, 1.0, 2.0])
     result = compare_raw(tmp_path / "trial", tmp_path / "ref")
-    assert result["background"] == {"0": {"samples": 3, "max_abs": 0.5}}
+    assert result["background"] == 0.5
 
 
-def test_compare_leaves_out_empty_series(tmp_path):
+def test_compare_of_only_empty_series_is_none(tmp_path):
     write_series(tmp_path / "ref", background=[0.0], foreground=[])
     write_series(tmp_path / "trial", background=[0.0], foreground=[])
-    assert (
-        compare_raw(tmp_path / "trial", tmp_path / "ref")["foreground"] == {}
-    )
+    result = compare_raw(tmp_path / "trial", tmp_path / "ref")
+    assert result["foreground"] is None
 
 
 def write_events(trial_dir, name, **parameters):

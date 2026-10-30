@@ -9,11 +9,9 @@ TIME_FORMAT = "%Y-%m-%d %H:%M:%S,%f"
 #   Inferred 4 streams in 10.0 s: 2.0 s loading data, 7.5 s in the model,
 #     0.5 s postprocessing. Peak GPU memory 1.25 GiB
 #   Finished branches ['0', '1'] (1920 s of strain each) in 10.5 s
-#   Wrote group outputs to infer/groups/0
 READY = "LocalInferenceClient ready"
 INFERRED = "Inferred"
 FINISHED = "Finished branches"
-WROTE = "Wrote group outputs"
 
 NUMBER = re.compile(r"\d[\d.]*")
 
@@ -25,13 +23,11 @@ def parse_log(path: Path) -> dict:
 
     Returns a dict with:
         gpu: GPU name from the "ready" line, or None if it wasn't logged.
-        model_ready, outputs_written: when each was logged, or None.
+        model_ready: when the LocalInferenceClient was logged as ready
         end: when the last line was logged, or None if no line was.
-        batches: one dict per "Finished branches" line, in order, with
-            finished, elapsed (s), branches (count), strain (s, all
-            branches), and from the "Inferred" line before it: streams,
-            data, model, postprocessing (s) and peak_gib. Those five are
-            None if no "Inferred" line came before it.
+        batches: one dict per "Finished branches" line, with elapsed (s),
+            strain (s, all branches), and from the "Inferred" line before
+            it: data, model (s) and peak_gib.
     """
     lines = []
     for line in path.read_text().splitlines():
@@ -49,7 +45,6 @@ def parse_log(path: Path) -> dict:
     record = {
         "gpu": None,
         "model_ready": None,
-        "outputs_written": None,
         "end": end,
         "batches": [],
     }
@@ -58,8 +53,6 @@ def parse_log(path: Path) -> dict:
         if message.startswith(READY):
             record["gpu"] = message.split(",")[1][1:-1]
             record["model_ready"] = seconds
-        if message.startswith(WROTE):
-            record["outputs_written"] = seconds
         if message.startswith(INFERRED):
             inferred = NUMBER.findall(message)
         if message.startswith(FINISHED):
@@ -68,21 +61,15 @@ def parse_log(path: Path) -> dict:
             elapsed = float(finished[-1])
             strain = float(finished[-2]) * branches
             batch = {
-                "finished": seconds,
                 "elapsed": elapsed,
-                "branches": branches,
                 "strain": strain,
-                "streams": None,
                 "data": None,
                 "model": None,
-                "postprocessing": None,
                 "peak_gib": None,
             }
             if inferred is not None:
-                batch["streams"] = int(inferred[0])
                 batch["data"] = float(inferred[2])
                 batch["model"] = float(inferred[3])
-                batch["postprocessing"] = float(inferred[4])
                 batch["peak_gib"] = float(inferred[5])
                 inferred = None
 

@@ -1,3 +1,5 @@
+import json
+import sys
 from pathlib import Path
 
 import h5py
@@ -7,8 +9,9 @@ import numpy as np
 def compare_raw(trial: Path, reference: Path) -> dict:
     """Compare a trial's raw network outputs with the reference's.
 
-    Returns {group: {branch_id: {"samples": int, "max_abs": float}}}, with
-    group "background" or "foreground", for each branch in both files.
+    Returns {group: max_abs}, with group "background" or "foreground".
+    `max_abs` is the largest absolute difference over the branches in
+    both files, or None if no branch in the group has samples.
     """
     results = {}
     with (
@@ -16,7 +19,7 @@ def compare_raw(trial: Path, reference: Path) -> dict:
         h5py.File(reference / "timeseries.hdf5", "r") as r,
     ):
         for group in ("background", "foreground"):
-            results[group] = {}
+            max_abs = []
             for branch_id in t[group].keys() & r[group].keys():
                 a, b = t[group][branch_id], r[group][branch_id]
                 if a.attrs["sample_t0"] != b.attrs["sample_t0"]:
@@ -24,12 +27,8 @@ def compare_raw(trial: Path, reference: Path) -> dict:
                 n = min(len(a), len(b))
                 if n == 0:
                     continue
-                timeseries_a, timeseries_b = a[:n], b[:n]
-
-                results[group][branch_id] = {
-                    "samples": len(timeseries_a),
-                    "max_abs": float(abs(timeseries_a - timeseries_b).max()),
-                }
+                max_abs.append(float(abs(a[:n] - b[:n]).max()))
+            results[group] = max(max_abs, default=None)
 
     return results
 
@@ -68,3 +67,24 @@ def compare_foreground(trial: Path, reference: Path) -> dict:
         "injections": len(statistics),
         "max_abs": float(abs(statistics - reference_statistics).max()),
     }
+
+
+def main() -> None:
+    """Compare a trial's outputs with the reference's.
+
+        python -m bench.compare <trial dir> <reference dir>
+
+    where each directory holds timeseries.hdf5, background.hdf5 and
+    foreground.hdf5.
+    """
+    trial, reference = Path(sys.argv[1]), Path(sys.argv[2])
+    result = {
+        "raw": compare_raw(trial, reference),
+        "events": compare_events(trial, reference),
+        "foreground": compare_foreground(trial, reference),
+    }
+    print(json.dumps(result, indent=2))
+
+
+if __name__ == "__main__":
+    main()

@@ -16,12 +16,14 @@ def test_batch_takes_stats_from_inferred_line_before_it(tmp_path):
         tmp_path,
         entry("10:00:00,000", "Loading model (backend=export)"),
         entry(
-            "10:00:05,500", "LocalInferenceClient ready (backend=export, NVIDIA A40)"
+            "10:00:05,500",
+            "LocalInferenceClient ready (backend=export, NVIDIA A40)",
         ),
         entry(
             "10:00:15,500",
             "Inferred 4 streams in 10.0 s: 2.0 s loading data, "
-            "7.5 s in the model, 0.5 s postprocessing. Peak GPU memory 1.25 GiB",
+            "7.5 s in the model, 0.5 s postprocessing. "
+            "Peak GPU memory 1.25 GiB",
         ),
         entry(
             "10:00:16,000",
@@ -33,14 +35,10 @@ def test_batch_takes_stats_from_inferred_line_before_it(tmp_path):
     assert record["model_ready"] == 5.5
     assert record["batches"] == [
         {
-            "finished": 16.0,
             "elapsed": 10.5,
-            "branches": 2,
             "strain": 3840.0,
-            "streams": 4,
             "data": 2.0,
             "model": 7.5,
-            "postprocessing": 0.5,
             "peak_gib": 1.25,
         }
     ]
@@ -56,5 +54,4 @@ def test_boundaries_missing_from_log_are_none(tmp_path):
     )
     record = parse_log(path)
     assert record["model_ready"] is None
-    assert record["outputs_written"] is None
     assert record["batches"] == []
