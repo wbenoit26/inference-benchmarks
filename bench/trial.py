@@ -78,20 +78,26 @@ def main() -> None:
     prints it, and each `--flag value` overrides that flag for this trial.
     """
     cmd_file, outdir, *flags = sys.argv[1:]
-    cmd = shlex.split(Path(cmd_file).read_text())
-    if "&>" in cmd:
-        cmd = cmd[: cmd.index("&>")]
     overrides = {
         flag.removeprefix("--"): value
         for flag, value in zip(flags[::2], flags[1::2], strict=True)
     }
+    cmd = load_cmd(Path(cmd_file))
+    print(run_trial(cmd, overrides, Path(outdir), gpu_info(), code_version()))
+
+
+def load_cmd(path: Path) -> list[str]:
+    cmd = shlex.split(path.read_text())
+    if "&>" in cmd:
+        cmd = cmd[: cmd.index("&>")]
+    return cmd
+
+
+def code_version() -> str:
     version_file = Path("code/VERSION")
-    version = (
-        version_file.read_text().strip()
-        if version_file.exists()
-        else "unknown"
-    )
-    print(run_trial(cmd, overrides, Path(outdir), gpu_info(), version))
+    if not version_file.exists():
+        return "unknown"
+    return version_file.read_text().strip()
 
 
 if __name__ == "__main__":
