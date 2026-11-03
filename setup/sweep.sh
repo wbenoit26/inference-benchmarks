@@ -1,5 +1,6 @@
 #!/bin/bash
-# Run a sweep of trials on this node's GPU.
+# Run a sweep of trials on this node's GPU, under gpus/<GPU name>/ in the
+# run directory.
 #
 #     setup/sweep.sh <site> [--repeats N] [--flag value ...]
 #
@@ -16,4 +17,4 @@ apptainer exec --nv \
     --env PYTHONPATH="$here" \
     --env TORCHINDUCTOR_CACHE_DIR="$RUN_DIR/inductor" \
     "$AFRAME_CONTAINER_ROOT/infer.sif" \
-    python -m bench.sweep bench_cmd.txt trials "$@"
+    python -m bench.sweep bench_cmd.txt gpus "$@"

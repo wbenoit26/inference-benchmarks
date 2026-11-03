@@ -1,5 +1,7 @@
 import itertools
+import json
 import sys
+import time
 from pathlib import Path
 
 from bench.trial import code_version, gpu_info, load_cmd, run_trial
@@ -40,6 +42,32 @@ def sweep(
     return written
 
 
+def compile_package(cmd: list[str], package: Path) -> None:
+    from infer.local import compile_aoti
+
+    def value(flag: str) -> str:
+        return cmd[cmd.index(f"--{flag}") + 1]
+
+    [ifos] = [arg for arg in cmd if arg.startswith("--ifos=")]
+    num_samples = int(
+        float(value("kernel_length")) * float(value("sample_rate"))
+    )
+    package.parent.mkdir(parents=True, exist_ok=True)
+    start = time.perf_counter()
+    compile_aoti(
+        value("weights"),
+        package,
+        int(value("batch_size")),
+        ifos.count(",") + 1,
+        num_samples,
+        "cuda",
+    )
+    seconds = time.perf_counter() - start
+    (package.parent / "compile.json").write_text(
+        json.dumps({"seconds": seconds})
+    )
+
+
 def main() -> None:
     """Run a sweep of trials from the command line.
 
@@ -50,6 +78,10 @@ def main() -> None:
     where cmd.txt is the same as for bench.trial. A flag with one value is
     passed to every configuration. Flags with multiple values have every
     combination run.
+
+    Each GPU type gets its own directory under root, holding its trials and,
+    when a backend is aoti, the package compiled for it and how long
+    compiling took (compile.json).
     """
     cmd_file, root, *args = sys.argv[1:]
     flags = {}
@@ -67,10 +99,18 @@ def main() -> None:
     }
 
     cmd = load_cmd(Path(cmd_file))
-    written = sweep(
-        cmd, varied, fixed, repeats, Path(root), gpu_info(), code_version()
-    )
-    print(f"wrote {len(written)} trials under {root}")
+    gpu = gpu_info()
+    name = gpu["name"].removeprefix("NVIDIA ").replace(" ", "-")
+    gpu_dir = Path(root) / name
+    if "aoti" in varied.get("backend", [fixed.get("backend")]):
+        package = gpu_dir / "model_aoti.pt2"
+        if not package.exists():
+            compile_package(cmd, package)
+        fixed["aoti_path"] = str(package)
+
+    trials = gpu_dir / "trials"
+    written = sweep(cmd, varied, fixed, repeats, trials, gpu, code_version())
+    print(f"wrote {len(written)} trials under {trials}")
 
 
 if __name__ == "__main__":
