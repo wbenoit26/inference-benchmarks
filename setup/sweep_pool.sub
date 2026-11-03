@@ -1,0 +1,23 @@
+universe = vanilla
+executable = setup/sweep.sh
+arguments = "cit11 --repeats 3 --backend export aoti compile --shifts_per_batch 1 4 8 16 22"
+getenv = HOME
+
+should_transfer_files = NO
+transfer_executable = false
+requirements = TARGET.EPNFS =?= true
+
+request_gpus = 1
+require_gpus = DeviceName == "NVIDIA RTX PRO 4000 Blackwell SFF Edition"
+request_cpus = 16
+request_memory = 64GB
+request_disk = 1GB
+
+accounting_group = $ENV(LIGO_GROUP)
+accounting_group_user = $ENV(LIGO_USERNAME)
+
+log = $ENV(HOME)/runs/bench/sweep_pool.$(Cluster).log
+output = $ENV(HOME)/runs/bench/sweep_pool.$(Cluster).out
+error = $ENV(HOME)/runs/bench/sweep_pool.$(Cluster).out
+
+queue
