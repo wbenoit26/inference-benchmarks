@@ -1,0 +1,23 @@
+universe = vanilla
+executable = setup/kernel_curve.sh
+arguments = "cit11"
+getenv = HOME
+
+should_transfer_files = NO
+transfer_executable = false
+requirements = TARGET.EPNFS =?= true
+
+request_gpus = 1
+require_gpus = DeviceName == "NVIDIA RTX PRO 4000 Blackwell SFF Edition"
+request_cpus = 16
+request_memory = 64GB
+request_disk = 1GB
+
+accounting_group = $ENV(LIGO_GROUP)
+accounting_group_user = $ENV(LIGO_USERNAME)
+
+log = $ENV(HOME)/runs/bench/kernel_curve.$(Cluster).log
+output = $ENV(HOME)/runs/bench/kernel_curve.$(Cluster).out
+error = $ENV(HOME)/runs/bench/kernel_curve.$(Cluster).out
+
+queue
