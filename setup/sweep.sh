@@ -11,7 +11,7 @@
 #         --cpus-per-task=16 --mem=64G --time=02:00:00 \
 #         --output=/work/nvme/bcse/$USER/runs/bench/sweep.%j.log \
 #         --wrap "setup/sweep.sh delta --repeats 3 --backend export aoti \
-#             --shifts_per_batch 1 4 8 16 22"
+#             --shifts_per_batch 1 2 4 8 16 32"
 
 set -euo pipefail
 source "$(dirname "$0")/common.sh"

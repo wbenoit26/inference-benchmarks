@@ -9,6 +9,7 @@ dependencies = ["numpy", "h5py"]
 dev = [
     "pytest",
     "prek>=0.1",
+    "torch>=2.15.0",
 ]
 
 [tool.ruff]

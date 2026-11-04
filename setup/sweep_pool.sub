@@ -1,6 +1,6 @@
 universe = vanilla
 executable = setup/sweep.sh
-arguments = "cit11 --repeats 3 --backend export aoti compile --shifts_per_batch 1 4 8 16 22"
+arguments = "cit11 --repeats 3 --backend export aoti --shifts_per_batch 1 2 4 8 16 32"
 getenv = HOME
 
 should_transfer_files = NO
